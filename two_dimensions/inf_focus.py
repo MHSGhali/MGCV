@@ -5,15 +5,23 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 class InfinityFocus():
-    def __init__(self, image_path, file_type, sigma=2, truncate=4, smallestDimension=100):
+    def __init__(self, image_path, file_type, sigma=10, truncate=4, smallestDimension=100):
         self.image_path, self.file_type = image_path, file_type
         self.sigma, self.truncate, self.smallestDimension= sigma, truncate, smallestDimension
         images = self.load_images()
-        mask = []    
+        masks = []    
         for image in images:
-            _, gau_p = self.laplacianPyramid(image)
-            mask.append(self.pyramidToMask(image,gau_p))
-        self.show_images(mask)
+            greyscale = sk.color.rgb2gray(image)
+            _, gau_p = self.laplacianPyramid(greyscale)
+            masks.append(self.pyramidToMask(image,gau_p))
+            
+            # mask = sk.filters.butterworth(greyscale, cutoff_frequency_ratio=0.0075, high_pass=True, order=20.0, channel_axis=None)
+            # mask = sk.filters.gaussian(greyscale, sigma = 10, truncate = 4, channel_axis=-1)
+            # mask = sk.filters.laplace(greyscale, ksize=3)
+            # normalized_mask = mask / np.max(mask)
+            # binary_mask = (normalized_mask >= 0.15).astype(np.uint8)
+            # masks.append(binary_mask)
+        self.show_images(masks)
             
     def load_images(self):
         images = []
@@ -39,9 +47,11 @@ class InfinityFocus():
         image_pyramid.append(image)
         while max(np.shape(image)) > self.smallestDimension:
             temp = sk.filters.gaussian(image, sigma = self.sigma, truncate = self.truncate, channel_axis=-1)
+            # temp = sk.filters.laplace(image, ksize = 3)
+            # temp = sk.filters.butterworth(image, cutoff_frequency_ratio=0.05, high_pass=True, order=2.0, channel_axis=None)
             residual = image - temp 
             gaussian_pyramid.append(residual)
-            image = image[::2, ::2, :]
+            image = image[::2, ::2]
             image_pyramid.append(image)
             
         return image_pyramid, gaussian_pyramid
@@ -50,7 +60,7 @@ class InfinityFocus():
         focus_mask = np.zeros_like(image, dtype=np.float64)
         for level in pyramid:
             level_laplacian = sk.transform.resize(level, focus_mask.shape)
-            focus_mask += level_laplacian/np.max(level_laplacian)
+            focus_mask += level_laplacian
         normalized_mask = (focus_mask - np.min(focus_mask)) / (np.max(focus_mask) - np.min(focus_mask))
         grayscale_mask = sk.color.rgb2gray(normalized_mask) 
         binary_mask = (grayscale_mask >= 0.5).astype(np.uint8)
