@@ -31,9 +31,6 @@ class Helpers():
             for i in range(n_images):
                 axes[0,i].imshow(images[i])
                 axes[0,i].axis('off')
-                # axes[1,i].imshow(results[i])
-                # axes[1,i].axis('off')
-                for contour in results[i]:
-                    axes[1,i].plot(contour[:, 1], contour[:, 0], linewidth=2)
-                    axes[1,i].axis('off')
+                axes[1,i].imshow(results[i])
+                axes[1,i].axis('off')
         plt.show()

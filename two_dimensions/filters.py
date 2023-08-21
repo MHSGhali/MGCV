@@ -12,12 +12,26 @@ class Filters():
         self.images = self.help.load_images()
         self.sigma, self.truncate = sigma, truncate
 
-    def infinity_focus(self, threshold):
-        filters = []
-        for image in self.images:
-            image = sk.color.rgb2gray(image)
-            filtered = self.process.gaussian(image, self.sigma, self.truncate)
-            residual = abs(image - filtered)
-            normalized = sk.measure.find_contours(residual/np.max(residual), 0.5)
-            filters.append(normalized)
-        self.help.show_images(self.images, filters)
+    def infinity_focus(self):
+        filters1 = []
+        filters2 = []
+        for img in self.images:
+            img = sk.color.rgb2gray(img)
+            
+            _, residual = self.process.gaussian(img, self.sigma, self.truncate)
+            normalized = self.process.normalize_image(residual,0,255)
+            thresh = self.process.get_threshold(normalized)
+            binary1 = normalized >= thresh
+            
+            filtered, _ = self.process.sobel(img)
+            normalized = self.process.normalize_image(filtered,0,255)
+            thresh = self.process.get_threshold(normalized)
+            binary2 = normalized >= thresh
+
+            # dilated_binary = sk.morphology.binary_dilation(binary2, sk.morphology.disk(20))
+            # filled_mask = sk.morphology.binary_erosion(dilated_binary, sk.morphology.disk(20))
+
+            filters1.append(binary1)
+            filters2.append(binary2)
+            
+        self.help.show_images(filters1, filters2)

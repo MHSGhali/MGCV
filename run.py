@@ -8,4 +8,4 @@ image_path = "D:\\data_sets\\CV\\blending"
 file_type = ".jpg"
 
 img = Filters(image_path, file_type, 10, 4)
-img.infinity_focus(0.15)
+img.infinity_focus()
