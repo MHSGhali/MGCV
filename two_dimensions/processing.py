@@ -49,3 +49,27 @@ class ImageProcessing():
             image = image[::2, ::2]
             image_pyramid.append(image)
         return image_pyramid, gaussian_pyramid
+    
+    def average_mask_in_windows(self, mask, window_size):
+        windows = sk.util.shape.view_as_windows(mask, (window_size, window_size))
+        window_means = np.mean(windows, axis=(2, 3))  # Calculate mean within each window
+        return sk.transform.resize(window_means, mask.shape, mode='constant', anti_aliasing=True)
+
+    def fill_between_first_last_true(self, binary, window_size):
+        filled_binary_row = np.copy(binary)
+        for row in range(binary.shape[0]):
+            col_indices = np.where(binary[row, :])[0]
+            if len(col_indices) > 0:
+                first_col = col_indices[0]
+                last_col = col_indices[-1]
+                filled_binary_row[row, first_col:last_col + 1] = True
+        
+        filled_binary_col = np.copy(binary)
+        for col in range(binary.shape[1]):
+            row_indices = np.where(binary[:, col])[0]
+            if len(row_indices) > 0:
+                first_row = row_indices[0]
+                last_row = row_indices[-1]
+                filled_binary_col[first_row:last_row + 1, col] = True
+        
+        return self.average_mask_in_windows(filled_binary_col * filled_binary_row, window_size)
