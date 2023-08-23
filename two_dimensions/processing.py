@@ -49,27 +49,53 @@ class ImageProcessing():
             image = image[::2, ::2]
             image_pyramid.append(image)
         return image_pyramid, gaussian_pyramid
-    
-    def average_mask_in_windows(self, mask, window_size):
-        windows = sk.util.shape.view_as_windows(mask, (window_size, window_size))
-        window_means = np.mean(windows, axis=(2, 3))  # Calculate mean within each window
-        return sk.transform.resize(window_means, mask.shape, mode='constant', anti_aliasing=True)
 
-    def fill_between_first_last_true(self, binary, window_size):
-        filled_binary_row = np.copy(binary)
-        for row in range(binary.shape[0]):
-            col_indices = np.where(binary[row, :])[0]
-            if len(col_indices) > 0:
-                first_col = col_indices[0]
-                last_col = col_indices[-1]
-                filled_binary_row[row, first_col:last_col + 1] = True
+    def fill_between_first_last_true_window(self, binary, window_size, stride):
+        num_rows = (binary.shape[0] - window_size) // stride + 1
+        num_cols = (binary.shape[1] - window_size) // stride + 1
+        filled_binary = np.copy(binary)
         
-        filled_binary_col = np.copy(binary)
-        for col in range(binary.shape[1]):
-            row_indices = np.where(binary[:, col])[0]
-            if len(row_indices) > 0:
-                first_row = row_indices[0]
-                last_row = row_indices[-1]
-                filled_binary_col[first_row:last_row + 1, col] = True
-        
-        return self.average_mask_in_windows(filled_binary_col * filled_binary_row, window_size)
+        for row in range(num_rows):
+            for col in range(num_cols):
+                window = binary[row * stride:row * stride + window_size,
+                            col * stride:col * stride + window_size]
+                
+                filled_binary_row = np.copy(window)
+                for r in range(window.shape[0]):
+                    col_indices = np.where(window[r, :])[0]
+                    if len(col_indices) > 0:
+                        first_col = col_indices[0]
+                        last_col = col_indices[-1]
+                        filled_binary_row[r, first_col:last_col + 1] = True
+                
+                filled_binary_col = np.copy(window)
+                for c in range(window.shape[1]):
+                    row_indices = np.where(window[:, c])[0]
+                    if len(row_indices) > 0:
+                        first_row = row_indices[0]
+                        last_row = row_indices[-1]
+                        filled_binary_col[first_row:last_row + 1, c] = True
+                
+                filled_binary[row * stride:row * stride + window_size,
+                            col * stride:col * stride + window_size] |= filled_binary_col | filled_binary_row
+                
+        return filled_binary
+    
+    def convex_hull_window(self, image, window_size, stride):
+        num_rows = (image.shape[0] - window_size) // stride + 1
+        num_cols = (image.shape[1] - window_size) // stride + 1
+        combined_mask = np.zeros(image.shape, dtype=bool)
+        for row in range(num_rows):
+            for col in range(num_cols):
+                window = image[row * stride:row * stride + window_size,
+                            col * stride:col * stride + window_size]
+                non_zero_indices = np.transpose(np.nonzero(window))
+                if len(non_zero_indices) > 0:
+                    hull_mask = sk.morphology.convex_hull_image(window)
+                    combined_mask[row * stride:row * stride + window_size,
+                                col * stride:col * stride + window_size] |= hull_mask
+        return combined_mask
+    
+    def fill_voids(self, binary_mask):
+        filled_mask = sk.morphology.remove_small_holes(binary_mask, area_threshold=10)
+        return filled_mask

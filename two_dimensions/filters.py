@@ -17,21 +17,14 @@ class Filters():
         filters2 = []
         for img in self.images:
             img = sk.color.rgb2gray(img)
-            
-            _, residual = self.process.gaussian(img, self.sigma, self.truncate)
-            normalized = self.process.normalize_image(residual,0,255)
-            thresh = self.process.get_threshold(normalized)
-            binary1 =  normalized >= thresh
-            
+
             filtered, _ = self.process.sobel(img)
             normalized = self.process.normalize_image(filtered,0,255)
             thresh = self.process.get_threshold(normalized)
-            binary2 =  normalized >= thresh
-
-            filter1 = self.process.fill_between_first_last_true(binary1, 25)
-            filter2 = self.process.fill_between_first_last_true(binary2, 25)
-
-            filters1.append(filter1 * img)
-            filters2.append(filter2 * img)
+            binary =  normalized >= thresh
+            hull = self.process.convex_hull_window(binary, 50, 5)
+            fill = self.process.fill_between_first_last_true_window(binary, 50, 5)
+            filters2.append(self.process.fill_voids(fill) * img)
+            filters1.append(self.process.fill_voids(hull) * img)
             
         self.help.show_images(filters1, filters2)
