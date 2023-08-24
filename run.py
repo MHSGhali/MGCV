@@ -4,8 +4,14 @@ from two_dimensions.filters import Filters
 from two_dimensions.processing import ImageProcessing
 from two_dimensions.helper import Helpers
 
-image_path = "D:\\data_sets\\CV\\blending"
+import skimage as sk
+import matplotlib.pyplot as plt
+import numpy as np
+
+image_path = "D:\\data_sets\\CV\\blending\\Base"
 file_type = ".jpg"
 
-img = Filters(image_path, file_type, 10, 4)
+img = Filters(image_path, file_type)
 img.infinity_focus()
+
+

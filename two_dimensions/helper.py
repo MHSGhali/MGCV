@@ -18,19 +18,15 @@ class Helpers():
                     images.append(img)
         return np.array(images)
     
-    def show_images(self, images, results):
-        n_images = len(images)
-        fig, axes = plt.subplots(2, n_images, figsize=(15, 5))
+    def show_images(self, images, result):
+        fig, axes = plt.subplot_mosaic("ABC;DDD")
         fig.tight_layout()
-        if n_images == 1:  # Handle the case of a single image
-            axes[0].imshow(images[0])
-            axes.axis('off')
-            axes[1].imshow(results[0])
-            axes.axis('off')
-        else:
-            for i in range(n_images):
-                axes[0,i].imshow(images[i])
-                axes[0,i].axis('off')
-                axes[1,i].imshow(results[i])
-                axes[1,i].axis('off')
+        axes["A"].imshow(images[0])
+        axes["A"].axis('off')
+        axes["B"].imshow(images[1])
+        axes["B"].axis('off')
+        axes["C"].imshow(images[2])
+        axes["C"].axis('off')
+        axes["D"].imshow(result)
+        axes["D"].axis('off')
         plt.show()
