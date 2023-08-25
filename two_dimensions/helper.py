@@ -18,6 +18,22 @@ class Helpers():
                     images.append(img)
         return np.array(images)
     
+    def plot_gaussian_pyramid(self, pyramid):
+        num_levels = len(pyramid)
+        rows = int(np.ceil(np.sqrt(num_levels)))
+        cols = int(np.ceil(num_levels / rows))
+
+        plt.figure(figsize=(12, 8))
+
+        for i, level in enumerate(pyramid):
+            plt.subplot(rows, cols, i + 1)
+            plt.imshow(level)
+            plt.title(f'Level {i + 1}')
+            plt.axis('off')
+
+        plt.tight_layout()
+        plt.show()
+
     def show_images(self, images, result):
         fig, axes = plt.subplot_mosaic("ABC;DDD")
         fig.tight_layout()

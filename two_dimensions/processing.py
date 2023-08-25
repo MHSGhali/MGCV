@@ -9,7 +9,7 @@ class ImageProcessing():
     def __init__(self):      
         pass
     
-    def gaussian(self, image, sigma_, truncate_):
+    def gaussian(self, image, sigma_ = 10, truncate_ = 4):
         filtered_image = sk.filters.gaussian(image, sigma=sigma_, truncate=truncate_, channel_axis = -1)
         residual_image = image - filtered_image
         return filtered_image, residual_image
@@ -40,17 +40,14 @@ class ImageProcessing():
         normalized_image = normalized_image * (max_value - min_value) + min_value
         return normalized_image.astype(np.uint8)
 
-    def laplacianPyramid(self, image, sigma_, truncate_, smallest_dim):
+    def laplacianPyramid(self, image, sigma_ = 10, truncate_ = 4, smallest_dim = 360):
         image = image.astype(float) / 255
-        image_pyramid = []
         gaussian_pyramid = []
-        image_pyramid.append(image)
         while max(np.shape(image)) > smallest_dim:
             _, res = self.gaussian(image, sigma_, truncate_)
             gaussian_pyramid.append(res)
             image = image[::2, ::2]
-            image_pyramid.append(image)
-        return image_pyramid, gaussian_pyramid
+        return image, gaussian_pyramid
 
     def combine_masks(self, results, masks):
         canvas_height = max(image.shape[0] for image in results)
