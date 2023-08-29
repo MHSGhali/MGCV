@@ -4,6 +4,7 @@ from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
 import skimage as sk
+from itertools import combinations
 
 class ImageProcessing():
     def __init__(self):      
@@ -49,15 +50,35 @@ class ImageProcessing():
             image = image[::2, ::2]
         return image, gaussian_pyramid
 
-    def combine_masks(self, results, masks):
-        canvas_height = max(image.shape[0] for image in results)
-        canvas_width = max(image.shape[1] for image in results)
-        combined_image = np.zeros((canvas_height, canvas_width, 3), dtype=np.uint8)
+    def masked_images(self, images, masks):
+        results = images.copy()
+        for i, mask in enumerate(masks):
+            void_indices = np.argwhere(np.logical_not(mask))
+            for idx in void_indices:
+                results[i][idx[0], idx[1], :] = [0, 0, 0]
+        return results
+
+    def stacked_image(self, results, masks):
+        combined_image = np.zeros_like(results[0], dtype=np.uint8)
         for masked_image, binary_mask in zip(results, masks):
             row_indices, col_indices = np.where(binary_mask)
             combined_image[row_indices, col_indices, :] = masked_image[row_indices, col_indices, :]
         return combined_image
     
+    def clean_masks(self, images, masks):
+        for mask_indices in combinations(range(len(masks)), 2):
+            mask1 = masks[mask_indices[0]]
+            mask2 = masks[mask_indices[1]]
+            image1,_ = self.sobel(images[mask_indices[0]])
+            image2,_ = self.sobel(images[mask_indices[1]])
+            intersection_indices = np.where(np.logical_and(mask1, mask2))
+            for group_indices in zip(*intersection_indices):
+                if np.mean(image1[group_indices]) > np.mean(image2[group_indices]):
+                    mask2[group_indices] = False
+                else:
+                    mask1[group_indices] = False
+        return masks
+
     def convex_hull_window(self, image, window_div, stride_div):
         window_size = min([x//window_div for x in np.shape(image)])
         stride = window_size//stride_div

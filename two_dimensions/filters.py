@@ -13,7 +13,6 @@ class Filters():
 
     def infinity_focus(self, method, window_num, stride_window):
         masks = []
-        results = self.images.copy()
         for i, img in enumerate(self.images):
             img = sk.color.rgb2gray(img)
             
@@ -25,14 +24,12 @@ class Filters():
             normalized = self.process.normalize_image(filtered)
             binary = self.process.get_threshold(normalized)
             hull = self.process.convex_hull_window(binary, window_num, stride_window)
-            filled_hull = self.process.fill_voids(hull)
-            void_indices = np.argwhere(np.logical_not(filled_hull))
-            
-            for idx in void_indices:
-                results[i][idx[0], idx[1], :] = [0, 0, 0]
-            
-            masks.append(hull)
-        combined_image = self.process.combine_masks(results, masks)
-        return combined_image, masks
+            filled_hull = self.process.fill_voids(hull)           
+            masks.append(filled_hull)
+        
+        masks = self.process.clean_masks(self.images, masks)
+        result_images = self.process.masked_images(self.images, masks)
+        stacked_image = self.process.stacked_image(result_images, masks)
+        return stacked_image, masks
         
         

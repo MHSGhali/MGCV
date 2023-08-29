@@ -12,7 +12,7 @@ image_path = "D:\\data_sets\\CV\\blending\\Base"
 file_type = ".jpg"
 
 img = Filters(image_path, file_type)
-combined, masks = img.infinity_focus("sobel", 5, 50)
+combined, masks = img.infinity_focus("sobel", 20, 10)
 img.help.plot_gaussian_pyramid(masks)
 sk.io.imsave('stacked_image.jpg', combined)
 
