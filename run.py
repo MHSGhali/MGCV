@@ -8,10 +8,11 @@ import skimage as sk
 import matplotlib.pyplot as plt
 import numpy as np
 
-image_path = "D:\\data_sets\\CV\\blending\\Base"
+image_path = "D:\\data_sets\\CV\\blending\\Base\\Tests\\dataset"
 file_type = ".jpg"
 
 img = Filters(image_path, file_type)
+
 combined, masks = img.infinity_focus("sobel", 20, 10)
 img.help.plot_gaussian_pyramid(masks)
 sk.io.imsave('stacked_image.jpg', combined)

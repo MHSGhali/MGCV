@@ -18,6 +18,17 @@ class Helpers():
                     images.append(img)
         return np.array(images)
     
+        # image_dict = {}
+        # for filename in sorted(os.listdir(self.image_path)):
+        #     if filename.endswith(self.file_type):
+        #         prefix = filename.split("_")[0]
+        #         img = sk.io.imread(os.path.join(self.image_path, filename))
+        #         if img is not None:
+        #             if prefix not in image_dict:
+        #                 image_dict[prefix] = []
+        #             image_dict[prefix].append(img)
+        # return image_dict
+    
     def plot_gaussian_pyramid(self, pyramid):
         num_levels = len(pyramid)
         rows = int(np.ceil(np.sqrt(num_levels)))

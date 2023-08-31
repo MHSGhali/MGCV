@@ -58,11 +58,15 @@ class ImageProcessing():
                 results[i][idx[0], idx[1], :] = [0, 0, 0]
         return results
 
-    def stacked_image(self, results, masks):
+    def stacked_image(self, images, results, masks, not_masked):
         combined_image = np.zeros_like(results[0], dtype=np.uint8)
         for masked_image, binary_mask in zip(results, masks):
             row_indices, col_indices = np.where(binary_mask)
             combined_image[row_indices, col_indices, :] = masked_image[row_indices, col_indices, :]
+        
+        row_indices, col_indices = np.where(not_masked)
+        combined_image[row_indices, col_indices, :] = images[0][row_indices, col_indices, :]
+
         return combined_image
     
     def clean_masks(self, images, masks):
@@ -71,13 +75,31 @@ class ImageProcessing():
             mask2 = masks[mask_indices[1]]
             image1,_ = self.sobel(images[mask_indices[0]])
             image2,_ = self.sobel(images[mask_indices[1]])
-            intersection_indices = np.where(np.logical_and(mask1, mask2))
-            for group_indices in zip(*intersection_indices):
-                if np.mean(image1[group_indices]) > np.mean(image2[group_indices]):
-                    mask2[group_indices] = False
+            
+            # # Grouping
+            # intersection_indices = np.where(np.logical_and(mask1, mask2))
+            # for group_indices in zip(*intersection_indices):
+            #     if np.mean(image1[group_indices]) > np.mean(image2[group_indices]):
+            #         mask2[group_indices] = False
+            #     else:
+            #         mask1[group_indices] = False
+
+            # Perform connected component analysis on the intersection
+            labeled_intersection = sk.measure.label(np.logical_and(mask1, mask2))
+            props = sk.measure.regionprops(labeled_intersection)
+            
+            for prop in props:
+                cluster_indices = prop.coords
+                mean_intensity_1 = np.mean(image1[cluster_indices[:, 0], cluster_indices[:, 1]])
+                mean_intensity_2 = np.mean(image2[cluster_indices[:, 0], cluster_indices[:, 1]])
+                if mean_intensity_1 > mean_intensity_2:
+                    mask2[cluster_indices[:, 0], cluster_indices[:, 1]] = False
                 else:
-                    mask1[group_indices] = False
-        return masks
+                    mask1[cluster_indices[:, 0], cluster_indices[:, 1]] = False
+
+        combined_mask = np.logical_or.reduce(masks)
+        not_masked = np.logical_not(combined_mask)
+        return masks, not_masked
 
     def convex_hull_window(self, image, window_div, stride_div):
         window_size = min([x//window_div for x in np.shape(image)])
