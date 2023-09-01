@@ -99,18 +99,6 @@ https://www.eecis.udel.edu/~nianyi/LFSD.htm
   </table>
 </div>
 
-Replace image1.jpg, image2.jpg, ..., image9.jpg, resultant_image1.jpg, and resultant_image2.jpg with the actual file paths or URLs of your images. The alt attribute is used for image descriptions for accessibility.
-
-In this example, rowspan="3" is used to make resultant_image1.jpg span across three rows, and colspan="3" is used to make an empty cell in the last row to align resultant_image2.jpg.
-
-Keep in mind that rendering might vary across different Markdown parsers and viewers. GitHub's Markdown parser supports HTML in README files, so this should work there.
-
-
-
-
-
-
-
 ### Contributing
 
 Contributions to this repository are welcome! Feel free to open issues or pull requests for any improvements or additional features.
