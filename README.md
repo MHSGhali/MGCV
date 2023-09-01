@@ -73,6 +73,7 @@ Using the Light field Salency Dataset (LFSD)
 https://www.eecis.udel.edu/~nianyi/LFSD.htm
 
 <style>
+  
   .center-container {
     display: flex;
     justify-content: center;
@@ -92,6 +93,7 @@ https://www.eecis.udel.edu/~nianyi/LFSD.htm
   .image-table th {
     text-align: center; /* Center headings */
   }
+  
 </style>
 
 <div class="center-container">
