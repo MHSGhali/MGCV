@@ -72,36 +72,12 @@ The `run.py` script demonstrates the usage of the pipeline. It loads images from
 Using the Light field Salency Dataset (LFSD) 
 https://www.eecis.udel.edu/~nianyi/LFSD.htm
 
-<style>
-  
-  .center-container {
-    display: flex;
-    justify-content: center;
-  }
-
-  .image-table {
-    border-collapse: collapse;
-  }
-
-  .image-table th,
-  .image-table td {
-    border: 1px solid black;
-    padding: 5px;
-    text-align: center;
-  }
-
-  .image-table th {
-    text-align: center; /* Center headings */
-  }
-  
-</style>
-
-<div class="center-container">
-  <table class="image-table">
+<div style="display: flex; justify-content: center;">
+  <table style="border-collapse: collapse;">
     <tr>
-      <th colspan="3"> Random Focus Images </th>
-      <th colspan="1"> Grouping ALgorithm </th>
-      <th colspan="1"> Segmentation Algorithm </th>
+      <th colspan="3" style="text-align: center;"> Random Focus Images </th>
+      <th colspan="1" style="text-align: center;"> Grouping Algorithm </th>
+      <th colspan="1" style="text-align: center;"> Segmentation Algorithm </th>
     </tr>
     <tr>
         <td><img src=".\Test\Images\1__refocus_00.jpg" alt="Image 1" style="width: 100px;"></td>
