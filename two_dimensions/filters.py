@@ -37,7 +37,7 @@ class Filters():
             i += 1
         
         start_time = time.time()
-        masks, not_masked = self.process.clean_masks(self.images, masks)
+        masks, not_masked = self.process.clean_masks(self.images, masks, method = 'group')
         end_time = time.time()
         print(f'Mask Cleaning time = {int(round(1000 * (end_time - start_time)))} mili-seconds')
 

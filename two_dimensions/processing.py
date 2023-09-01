@@ -69,33 +69,34 @@ class ImageProcessing():
 
         return combined_image
     
-    def clean_masks(self, images, masks):
+    def clean_masks(self, images, masks, method = 'segment'):
         for mask_indices in combinations(range(len(masks)), 2):
             mask1 = masks[mask_indices[0]]
             mask2 = masks[mask_indices[1]]
             image1,_ = self.sobel(images[mask_indices[0]])
             image2,_ = self.sobel(images[mask_indices[1]])
             
-            # # Grouping
-            # intersection_indices = np.where(np.logical_and(mask1, mask2))
-            # for group_indices in zip(*intersection_indices):
-            #     if np.mean(image1[group_indices]) > np.mean(image2[group_indices]):
-            #         mask2[group_indices] = False
-            #     else:
-            #         mask1[group_indices] = False
-
-            # Perform connected component analysis on the intersection
-            labeled_intersection = sk.measure.label(np.logical_and(mask1, mask2))
-            props = sk.measure.regionprops(labeled_intersection)
+            if method == 'group':
+                # Grouping
+                intersection_indices = np.where(np.logical_and(mask1, mask2))
+                for group_indices in zip(*intersection_indices):
+                    if np.mean(image1[group_indices]) > np.mean(image2[group_indices]):
+                        mask2[group_indices] = False
+                    else:
+                        mask1[group_indices] = False
             
-            for prop in props:
-                cluster_indices = prop.coords
-                mean_intensity_1 = np.mean(image1[cluster_indices[:, 0], cluster_indices[:, 1]])
-                mean_intensity_2 = np.mean(image2[cluster_indices[:, 0], cluster_indices[:, 1]])
-                if mean_intensity_1 > mean_intensity_2:
-                    mask2[cluster_indices[:, 0], cluster_indices[:, 1]] = False
-                else:
-                    mask1[cluster_indices[:, 0], cluster_indices[:, 1]] = False
+            if method == 'segment':
+                # Perform connected component analysis on the intersection
+                labeled_intersection = sk.measure.label(np.logical_and(mask1, mask2))
+                props = sk.measure.regionprops(labeled_intersection)
+                for prop in props:
+                    cluster_indices = prop.coords
+                    mean_intensity_1 = np.mean(image1[cluster_indices[:, 0], cluster_indices[:, 1]])
+                    mean_intensity_2 = np.mean(image2[cluster_indices[:, 0], cluster_indices[:, 1]])
+                    if mean_intensity_1 > mean_intensity_2:
+                        mask2[cluster_indices[:, 0], cluster_indices[:, 1]] = False
+                    else:
+                        mask1[cluster_indices[:, 0], cluster_indices[:, 1]] = False
 
         combined_mask = np.logical_or.reduce(masks)
         not_masked = np.logical_not(combined_mask)
@@ -118,6 +119,7 @@ class ImageProcessing():
     
     def fill_voids(self, binary_mask):
         seed = np.copy(binary_mask)
+
         seed[1:-1, 1:-1] = binary_mask.max()
         filled_mask = sk.morphology.reconstruction(seed, binary_mask, method='erosion')
         return filled_mask
