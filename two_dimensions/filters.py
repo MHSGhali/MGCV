@@ -15,16 +15,16 @@ class Filters():
         end_time = time.time()
         print(f'Initialization time = {int(round(1000 * (end_time - start_time)))} mili-seconds')
 
-    def infinity_focus(self, method, window_num, stride_window):
+    def infinity_focus(self, edge_method, window_num, stride_window, cluster_method = 'group'):
         masks = []
         i = 1
         for img in self.images:
             start_time = time.time()
             img = sk.color.rgb2gray(img)
 
-            if method == "sobel":
+            if edge_method == "sobel":
                 filtered, _ = self.process.sobel(img)
-            elif method == "gaussian":
+            elif edge_method == "gaussian":
                 _, filtered = self.process.gaussian(img)
             
             normalized = self.process.normalize_image(filtered)
@@ -37,7 +37,7 @@ class Filters():
             i += 1
         
         start_time = time.time()
-        masks, not_masked = self.process.clean_masks(self.images, masks, method = 'group')
+        masks, not_masked = self.process.clean_masks(self.images, masks, method = cluster_method)
         end_time = time.time()
         print(f'Mask Cleaning time = {int(round(1000 * (end_time - start_time)))} mili-seconds')
 
@@ -52,4 +52,9 @@ class Filters():
         print(f'Image Stacking time = {int(round(1000 * (end_time - start_time)))} mili-seconds')
         return stacked_image, masks
         
-        
+    def panoirama(self,):
+        locs, decs = briefLite(im1, im2)
+        matches = briefMatch(decs[0], decs[1])
+        np.random.seed(0)
+        H2to1 = ransac_homography(matches, locs[0], locs[1], num_iter=50, threshold=2)
+        pano_im = imageStitching(im1, im2, H2to1)
