@@ -2,6 +2,7 @@ import os
 import time
 
 from .processing import ImageProcessing
+from .homography import Homography
 from .helper import Helpers
 import numpy as np
 import skimage as sk
@@ -11,6 +12,7 @@ class Filters():
         start_time = time.time()
         self.help = Helpers(image_path, file_type)
         self.process = ImageProcessing()
+        self.homography = Homography()
         self.images = self.help.load_images()
         end_time = time.time()
         print(f'Initialization time = {int(round(1000 * (end_time - start_time)))} mili-seconds')
@@ -52,9 +54,13 @@ class Filters():
         print(f'Image Stacking time = {int(round(1000 * (end_time - start_time)))} mili-seconds')
         return stacked_image, masks
         
-    def panoirama(self,):
-        locs, decs = briefLite(im1, im2)
-        matches = briefMatch(decs[0], decs[1])
+    def panorama(self):
+        image1, image2 = sk.img_as_ubyte(self.images[0]), sk.img_as_ubyte(self.images[1])
+        scale = 0.5
+        im1, im2 =  self.help.scale_image(image1, scale),  self.help.scale_image(image2, scale)
+        locs, decs = self.homography.briefLite(im1, im2, visual = True)
+        matches = self.homography.briefMatch(decs[0], decs[1])
         np.random.seed(0)
-        H2to1 = ransac_homography(matches, locs[0], locs[1], num_iter=50, threshold=2)
-        pano_im = imageStitching(im1, im2, H2to1)
+        H2to1 = self.homography.ransac_homography(matches, locs[0], locs[1], num_iter= 1000, threshold=1)
+        pano_im = self.homography.imageStitching(im1, im2, H2to1)
+        return pano_im.astype(np.float32)

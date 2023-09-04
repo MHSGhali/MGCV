@@ -4,18 +4,16 @@ import time
 from .processing import ImageProcessing
 from .helper import Helpers
 import numpy as np
+import math
 import skimage as sk
 from scipy.spatial.distance import cdist
 import cv2
 import matplotlib.pyplot as plt
 
-class homography():
-    def __init__(self, image_path, file_type):
-        self.help = Helpers(image_path, file_type)
-        self.process = ImageProcessing()
-        self.images = self.help.load_images()
+class Homography():
+    def __init__(self):
+        pass
 
-    
     def briefLite(self, img1, img2, visual=False):
         demo_img_gray = cv2.cvtColor(img1, cv2.COLOR_RGB2GRAY)
         test_demo_img_gray = cv2.cvtColor(img2, cv2.COLOR_RGB2GRAY)
@@ -23,8 +21,8 @@ class homography():
         BRIEF = cv2.ORB_create()
         demo_ip = FAST.detect(img1, None)
         test_demo_ip = FAST.detect(img2, None)
-        demo_ip, demo_descriptor = BRIEF.compute(demo_img_gray, demo_ip)
-        test_demo_ip, test_demo_descriptor = BRIEF.compute(test_demo_img_gray, test_demo_ip)
+        demo_ip, demo_descriptor = BRIEF.compute(img1, demo_ip)
+        test_demo_ip, test_demo_descriptor = BRIEF.compute(img2, test_demo_ip)
         print("Number of Interest Points Detected in Original Image: ", len(demo_ip))
         print("Number of Interest Points Detected in Transformed Image: ", len(test_demo_ip))
         
@@ -109,7 +107,7 @@ class homography():
         for _ in range(num_iter):
             picked_idx = np.random.choice(locs1.shape[0], 4)
             pts1, pts2 = locs1[picked_idx, ...].T, locs2[picked_idx, ...].T
-            H = compute_homography(pts2, pts1) #to be implemented, call the function that compute the homography
+            H = self.compute_homography(pts2, pts1) #to be implemented, call the function that compute the homography
             x1_pred = H.dot(x2) #to be implemened, we want to transform point from second image (x2) to first image (x1_pred) using the homography we found 
             x1_pred /= x1_pred[2:3, ...] #normalize
             error = np.sqrt(np.sum((x1 - x1_pred) ** 2, axis=0)) # to be implemented, compute the root squared error (in pseudo-code, sqrt(sum((a - b)**2)), or euclidean distance) between the actual x1 position and the x1_pred to know how well is our homography perform
@@ -124,13 +122,13 @@ class homography():
         # finally, compute the homography again using the best inliers set
         pts1 = locs1[max_selected_points, ...].T
         pts2 = locs2[max_selected_points, ...].T
-        bestH = compute_homography(pts2,pts1) #to be implement, compute the homography 
+        bestH = self.compute_homography(pts2,pts1) #to be implement, compute the homography 
         return bestH
     
     def imageStitching(self, im1, im2, H2to1):
         scale = 1
         tx = 0
-        M_scale = np.array([[scale, 0, tx], [0, scale, 0], [0, 0, 1]], dtype=np.float64) # to be implemented, recall how the 3x3 scaling matrix should looks like in homogeneous coordinate
+        M_scale = np.array([[scale, 0, tx], [0, scale, 0], [0, 0, 1]], dtype=np.float32) # to be implemented, recall how the 3x3 scaling matrix should looks like in homogeneous coordinate
 
         # vectorize corner calcuation, corner should be the most extreme point from the image, which is (0, 0) and (imgh, imgw)
         im2_h, im2_w = im2.shape[0], im2.shape[1]
@@ -144,30 +142,58 @@ class homography():
         maxw = np.max(wrapped_corner[0, ...])
         
         ty = max(0, -minh)
-        M_translate = np.array([[1, 0, tx], [0, 1, ty], [0, 0, 1]], dtype=np.float64) # to be implemented, recall how the 3x3 translate matrix should looks like in homogeneous coordinate
+        M_translate = np.array([[1, 0, tx], [0, 1, ty], [0, 0, 1]], dtype=np.float32) # to be implemented, recall how the 3x3 translate matrix should looks like in homogeneous coordinate
         
         out_width = int(math.ceil(maxw - 0))
         out_height = int(math.ceil(maxh - minh))
         out_size = (out_width, out_height)
 
         M = M_translate @ M_scale # to be implemented translate then scale
-        pano_im1 = cv2.warpPerspective(im1, M, out_size).astype(np.float64) # to be implemented, utilize cv2.warpPerspective(im, H, out_size) function
-        pano_im2 = cv2.warpPerspective(im2, M @ H2to1, out_size).astype(np.float64) # to be implemented, utilize cv2.warpPerspective(im, H, out_size) function
+        pano_im1 = cv2.warpPerspective(im1, M, out_size).astype(np.float32) # to be implemented, utilize cv2.warpPerspective(im, H, out_size) function
+        pano_im2 = cv2.warpPerspective(im2, M @ H2to1, out_size).astype(np.float32) # to be implemented, utilize cv2.warpPerspective(im, H, out_size) function
         pano_im1 /= 255.
         pano_im2 /= 255.
     
         im1_pano_mask =  pano_im1 > 0 #to be implemented, only left the part where pano_img1 has pixel value larger than 0
         im2_pano_mask = pano_im2 > 0 #to be implemented, only left the part where pano_img2 has pixel value larger than 0
         
-        im_center_mask = im1_pano_mask & im2_pano_mask  # handle the center where 2 images meet
+        im_int_mask = im1_pano_mask & im2_pano_mask  # handle the center where 2 images meet
         pano_im_full = pano_im1 + pano_im2 #to be implemented, which is formed by pano_im1 and pano_im2
 
         # mask filter, where only left the park has value > 0 
-        im_R = pano_im_full * (~im1_pano_mask & im2_pano_mask)  
-        im_L = pano_im_full * (im1_pano_mask & ~im2_pano_mask) 
+        im_1 = pano_im_full * (~im1_pano_mask & im2_pano_mask)  
+        im_2 = pano_im_full * (im1_pano_mask & ~im2_pano_mask) 
         
         ratio = 0.5   #to be implemented, blend the ceneter of the image, which ideally should apply a ratio
-        im_center = pano_im_full * im_center_mask  * ratio
-        pano_im = im_L + im_center + im_R #to be implemented, the final panoram should be combination of im_R, im_L and im_center
+        im_int = pano_im_full * im_int_mask  * ratio
+        pano_im = im_1 + im_int + im_2 #to be implemented, the final panoram should be combination of im_R, im_L and im_center
         
         return pano_im
+    
+    def plotMatches(self, im1, im2, matches, locs1, locs2):
+        n_locs1, n_locs2 = [], []
+        # convert locs to NumPy array
+        for i in locs1:
+            n_locs1.append([i.pt[0], i.pt[1]])
+        for i in locs2:
+            n_locs2.append([i.pt[0], i.pt[1]])
+        locs1 = np.array(n_locs1)
+        locs2 = np.array(n_locs2)
+        
+        fig = plt.figure()
+        imH = max(im1.shape[0], im2.shape[0])
+        im = np.zeros((imH, im1.shape[1]+im2.shape[1]))
+        im1 = cv2.cvtColor(im1, cv2.COLOR_BGR2GRAY)
+        im2 = cv2.cvtColor(im2, cv2.COLOR_BGR2GRAY)
+        im[0:im1.shape[0], 0:im1.shape[1]] = im1
+        im[0:im2.shape[0], im1.shape[1]:] = im2
+        plt.imshow(im, cmap='gray')
+        for i in range(matches.shape[0]):
+            pt1 = locs1[matches[i,0], 0:2]
+            pt2 = locs2[matches[i,1], 0:2].copy()
+            pt2[0] += im1.shape[1]
+            x = np.array([pt1[0], pt2[0]])
+            y = np.array([pt1[1], pt2[1]])
+            plt.plot(x,y,'r',lw=1)
+            plt.plot(x,y,'g.')
+        plt.show()

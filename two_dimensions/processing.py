@@ -48,7 +48,7 @@ class ImageProcessing():
             _, res = self.gaussian(image, sigma_, truncate_)
             gaussian_pyramid.append(res)
             image = image[::2, ::2]
-        return image, gaussian_pyramid
+        return image.astype(np.uint8), gaussian_pyramid
 
     def masked_images(self, images, masks):
         results = images.copy()
