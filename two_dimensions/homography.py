@@ -138,12 +138,14 @@ class Homography():
 
         minh = np.min(wrapped_corner[1, ...])
         maxh = np.max(wrapped_corner[1, ...])
+        minw = np.min(wrapped_corner[0, ...]) 
         maxw = np.max(wrapped_corner[0, ...])
         
         ty = max(0, -minh)
+        tx = max(0, -minw)  # Updated this line
         M_translate = np.array([[1, 0, tx], [0, 1, ty], [0, 0, 1]], dtype=np.float32) # to be implemented, recall how the 3x3 translate matrix should looks like in homogeneous coordinate
         
-        out_width = int(math.ceil(maxw - 0))
+        out_width = int(math.ceil(maxw - minw))  # Updated this line
         out_height = int(math.ceil(maxh - minh))
         out_size = (out_width, out_height)
 
