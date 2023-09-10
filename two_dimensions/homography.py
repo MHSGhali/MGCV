@@ -9,22 +9,19 @@ import skimage as sk
 from scipy.spatial.distance import cdist
 import cv2
 import matplotlib.pyplot as plt
+from itertools import combinations
 
 class Homography():
     def __init__(self):
         pass
 
     def briefLite(self, img1, img2, visual=False):
-        demo_img_gray = cv2.cvtColor(img1, cv2.COLOR_RGB2GRAY)
-        test_demo_img_gray = cv2.cvtColor(img2, cv2.COLOR_RGB2GRAY)
         FAST = cv2.FastFeatureDetector_create() 
         BRIEF = cv2.ORB_create()
         demo_ip = FAST.detect(img1, None)
         test_demo_ip = FAST.detect(img2, None)
         demo_ip, demo_descriptor = BRIEF.compute(img1, demo_ip)
         test_demo_ip, test_demo_descriptor = BRIEF.compute(img2, test_demo_ip)
-        print("Number of Interest Points Detected in Original Image: ", len(demo_ip))
-        print("Number of Interest Points Detected in Transformed Image: ", len(test_demo_ip))
         
         if visual: 
             visual_img = img1.copy()
@@ -98,8 +95,8 @@ class Homography():
         locs1 = np.array(pts1)
         locs2 = np.array(pts2)
         x1, x2 = np.vstack((locs1.T, np.ones(locs1.shape[0]))), np.vstack((locs2.T, np.ones(locs2.shape[0])))
-        bestH = np.zeros((3,3)) # to be implemented, should be an empty 3x3 NumPy array
         
+        bestH = np.zeros((3,3)) # to be implemented, should be an empty 3x3 NumPy array
         # RANSAC parameters
         max_inliers = -1
         max_selected_points = None
@@ -107,11 +104,12 @@ class Homography():
         for _ in range(num_iter):
             picked_idx = np.random.choice(locs1.shape[0], 4)
             pts1, pts2 = locs1[picked_idx, ...].T, locs2[picked_idx, ...].T
-            H = self.compute_homography(pts2, pts1) #to be implemented, call the function that compute the homography
-            x1_pred = H.dot(x2) #to be implemened, we want to transform point from second image (x2) to first image (x1_pred) using the homography we found 
+            H = self.compute_homography(pts2, pts1) 
+            # H = self.ndlt_homography(pts2, pts1) 
+            x1_pred = H.dot(x2) 
             x1_pred /= x1_pred[2:3, ...] #normalize
-            error = np.sqrt(np.sum((x1 - x1_pred) ** 2, axis=0)) # to be implemented, compute the root squared error (in pseudo-code, sqrt(sum((a - b)**2)), or euclidean distance) between the actual x1 position and the x1_pred to know how well is our homography perform
-            selected_points = np.where(error < threshold)[0] # to be implemented, should be the index of points which has error that is less than threshold
+            error = np.sqrt(np.sum((x1 - x1_pred) ** 2, axis=0)) 
+            selected_points = np.where(error < threshold)[0]
             num_inliers = selected_points.size  
             if num_inliers > max_inliers:
                 # update the best guess homography 
@@ -122,7 +120,8 @@ class Homography():
         # finally, compute the homography again using the best inliers set
         pts1 = locs1[max_selected_points, ...].T
         pts2 = locs2[max_selected_points, ...].T
-        bestH = self.compute_homography(pts2,pts1) #to be implement, compute the homography 
+        bestH = self.compute_homography(pts2,pts1) 
+        # bestH = self.ndlt_homography(pts2, pts1) 
         return bestH
     
     def imageStitching(self, im1, im2, H2to1):
@@ -170,6 +169,59 @@ class Homography():
         
         return pano_im
     
+    def normalize_points(self, points):
+        if points.shape[1] == 0:
+            return np.identity(3), points
+        mean = np.mean(points, axis=1)
+        scale = np.sqrt(2) / np.mean(np.linalg.norm(points - mean.reshape(-1, 1), axis=0))
+        T = np.array([[scale, 0, -scale * mean[0]],
+                    [0, scale, -scale * mean[1]],
+                    [0, 0, 1]])
+
+        points_homogeneous = np.vstack((points, np.ones(points.shape[1])))
+        normalized_points_homogeneous = np.dot(T, points_homogeneous)
+        normalized_points = normalized_points_homogeneous[:2, :]
+
+        return T, normalized_points
+
+    def ndlt_homography(self, points1, points2):
+        if points1.shape[1] < 4 or points2.shape[1] < 4:
+            raise ValueError("At least 4 corresponding points are required for NDLT.")
+    
+        T1, normalized_points1 = self.normalize_points(points1)
+        T2, normalized_points2 = self.normalize_points(points2)
+
+        A = []
+        for i in range(normalized_points1.shape[1]):
+            x1, y1 = normalized_points1[:, i]
+            x2, y2 = normalized_points2[:, i]
+            A.append([-x1, -y1, -1, 0, 0, 0, x1 * x2, y1 * x2, x2])
+            A.append([0, 0, 0, -x1, -y1, -1, x1 * y2, y1 * y2, y2])
+
+        A = np.array(A)
+
+        _, _, vh = np.linalg.svd(A)
+        H2to1 = vh[-1, :].reshape((3, 3))
+        H2to1 = np.linalg.inv(T1) @ H2to1 @ T2  # Denormalize
+
+        return H2to1
+
+    def get_combination_homographies(self, images, scale, num_iter, threshold):
+        homographies = []
+        number_of_matches = [] 
+        combination = []
+        for images_set in combinations(range(len(images)), 2):
+            combination.append(images_set)
+            img1 = Helpers.scale_image(self, sk.img_as_ubyte(images[images_set[0]]), scale)
+            img2 = Helpers.scale_image(self, sk.img_as_ubyte(images[images_set[1]]), scale)
+            locs, decs = self.briefLite(img1, img2, visual=False)
+            matches = self.briefMatch(decs[0], decs[1])
+            number_of_matches.append(len(matches))
+            np.random.seed(0)
+            H2to1 = self.ransac_homography(matches, locs[0], locs[1], num_iter, threshold)
+            homographies.append(H2to1)
+        return homographies, number_of_matches, combination
+
     def plotMatches(self, im1, im2, matches, locs1, locs2):
         n_locs1, n_locs2 = [], []
         # convert locs to NumPy array

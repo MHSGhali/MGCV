@@ -22,6 +22,6 @@ file_type = ".jpg"
 
 img = Filters(image_path, file_type)
 
-panorama_image = sk.img_as_ubyte(img.panorama())
+panorama_image = img.panorama()
 plt.figure(figsize=(20, 20)); plt.imshow(panorama_image)
 sk.io.imsave('panorama_image.jpg', panorama_image)

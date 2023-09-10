@@ -55,12 +55,23 @@ class Filters():
         return stacked_image, masks
         
     def panorama(self):
-        image1, image2 = sk.img_as_ubyte(self.images[0]), sk.img_as_ubyte(self.images[1])
-        scale = 0.5
-        im1, im2 =  self.help.scale_image(image1, scale),  self.help.scale_image(image2, scale)
-        locs, decs = self.homography.briefLite(im1, im2, visual = True)
-        matches = self.homography.briefMatch(decs[0], decs[1])
-        np.random.seed(0)
-        H2to1 = self.homography.ransac_homography(matches, locs[0], locs[1], num_iter= 1000, threshold=1)
-        pano_im = self.homography.imageStitching(im1, im2, H2to1)
-        return pano_im.astype(np.float32)
+        scale, num_iter, threshold = 0.25, 50000, 10  
+        homographies, number_of_matches, combination = self.homography.get_combination_homographies(self.images, scale, num_iter, threshold)
+        homography_indices = [ind for ind, x in enumerate(number_of_matches) if x > np.mean(number_of_matches)]
+        matched_images = [combination[i] for i in homography_indices]
+        matched_homographies = [homographies[i] for i in homography_indices]
+        for i in range(len(number_of_matches)):
+            print(f'match : {combination[i]} with homography : {homographies[i]}')
+
+        for j in range(len(matched_homographies)):
+            print(f'match : {matched_images[j]} with homography : {matched_homographies[j]}')
+        # anchor_image = self.help.scale_image(sk.img_as_ubyte(self.images[0]), scale)
+        # H2to1 = np.identity(3)
+
+        for idx, set in enumerate(matched_images):
+            img1 = self.help.scale_image(sk.img_as_ubyte(self.images[set[0]]), scale)
+            img2 = self.help.scale_image(sk.img_as_ubyte(self.images[set[1]]), scale)
+            H2to1 = matched_homographies[idx]
+            anchor_image  = self.homography.imageStitching(img1, img2, H2to1)
+        
+        return sk.img_as_ubyte(anchor_image)
