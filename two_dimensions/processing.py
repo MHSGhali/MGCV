@@ -119,7 +119,6 @@ class ImageProcessing():
     
     def fill_voids(self, binary_mask):
         seed = np.copy(binary_mask)
-
         seed[1:-1, 1:-1] = binary_mask.max()
         filled_mask = sk.morphology.reconstruction(seed, binary_mask, method='erosion')
         return filled_mask

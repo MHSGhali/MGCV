@@ -6,6 +6,8 @@ from .homography import Homography
 from .helper import Helpers
 import numpy as np
 import skimage as sk
+import cv2
+
 
 class Filters():
     def __init__(self, image_path, file_type):
@@ -64,10 +66,22 @@ class Filters():
         matched_images = [combination[i] for i in homography_indices]
         matched_homographies = [homographies[i] for i in homography_indices]
         panorama_images = []
+
         for idx, set in enumerate(matched_images):
             img1 = self.help.scale_image(sk.img_as_ubyte(self.images[set[0]]), scale)
             img2 = self.help.scale_image(sk.img_as_ubyte(self.images[set[1]]), scale)
             H2to1 = matched_homographies[idx]
             panorama = sk.img_as_ubyte(self.homography.imageStitching(img1, img2, H2to1))
             panorama_images.append(panorama) 
+    
         return panorama_images
+    
+    def opencv_stitch(self):
+        stitching = cv2.Stitcher.create()
+        images = []
+        for image in self.images:
+            images.append(sk.img_as_ubyte(image)[:, :, ::-1])
+        _, pano_im = stitching.stitch(images)
+        
+        result = self.homography.remove_void_regions(pano_im)
+        return result

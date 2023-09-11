@@ -10,6 +10,7 @@ from scipy.spatial.distance import cdist
 import cv2
 import matplotlib.pyplot as plt
 from itertools import combinations
+import imutils
 
 class Homography():
     def __init__(self):
@@ -170,43 +171,6 @@ class Homography():
         pano_im = im_1 + im_int + im_2 #to be implemented, the final panoram should be combination of im_R, im_L and im_center
         
         return pano_im
-    
-    def normalize_points(self, points):
-        if points.shape[1] == 0:
-            return np.identity(3), points
-        mean = np.mean(points, axis=1)
-        scale = np.sqrt(2) / np.mean(np.linalg.norm(points - mean.reshape(-1, 1), axis=0))
-        T = np.array([[scale, 0, -scale * mean[0]],
-                    [0, scale, -scale * mean[1]],
-                    [0, 0, 1]])
-
-        points_homogeneous = np.vstack((points, np.ones(points.shape[1])))
-        normalized_points_homogeneous = np.dot(T, points_homogeneous)
-        normalized_points = normalized_points_homogeneous[:2, :]
-
-        return T, normalized_points
-
-    def ndlt_homography(self, points1, points2):
-        if points1.shape[1] < 4 or points2.shape[1] < 4:
-            raise ValueError("At least 4 corresponding points are required for NDLT.")
-    
-        T1, normalized_points1 = self.normalize_points(points1)
-        T2, normalized_points2 = self.normalize_points(points2)
-
-        A = []
-        for i in range(normalized_points1.shape[1]):
-            x1, y1 = normalized_points1[:, i]
-            x2, y2 = normalized_points2[:, i]
-            A.append([-x1, -y1, -1, 0, 0, 0, x1 * x2, y1 * x2, x2])
-            A.append([0, 0, 0, -x1, -y1, -1, x1 * y2, y1 * y2, y2])
-
-        A = np.array(A)
-
-        _, _, vh = np.linalg.svd(A)
-        H2to1 = vh[-1, :].reshape((3, 3))
-        H2to1 = np.linalg.inv(T1) @ H2to1 @ T2  # Denormalize
-
-        return H2to1
 
     def get_combination_homographies(self, images, scale, num_iter, threshold):
         homographies = []
@@ -223,6 +187,31 @@ class Homography():
             H2to1 = self.ransac_homography(matches, locs[0], locs[1], num_iter, threshold)
             homographies.append(H2to1)
         return homographies, number_of_matches, combination
+
+    def remove_void_regions(self, stitched_img):
+        stitched_img = cv2.copyMakeBorder(stitched_img, 10, 10, 10, 10, cv2.BORDER_CONSTANT, (0,0,0))
+        gray = cv2.cvtColor(stitched_img, cv2.COLOR_BGR2GRAY)
+        thresh_img = cv2.threshold(gray, 0, 255 , cv2.THRESH_BINARY)[1]
+        contours = cv2.findContours(thresh_img.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours = imutils.grab_contours(contours)
+        areaOI = max(contours, key=cv2.contourArea)
+        mask = np.zeros(thresh_img.shape, dtype="uint8")
+        x, y, w, h = cv2.boundingRect(areaOI)
+        
+        cv2.rectangle(mask, (x,y), (x + w, y + h), 255, -1)
+        minRectangle = mask.copy()
+        sub = mask.copy()
+        
+        while cv2.countNonZero(sub) > 0:
+            minRectangle = cv2.erode(minRectangle, None)
+            sub = cv2.subtract(minRectangle, thresh_img)
+        
+        contours = cv2.findContours(minRectangle.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours = imutils.grab_contours(contours)
+        areaOI = max(contours, key=cv2.contourArea)
+        x, y, w, h = cv2.boundingRect(areaOI)
+        stitched_img = stitched_img[y:y + h, x:x + w]
+        return stitched_img
 
     def plotMatches(self, im1, im2, matches, locs1, locs2):
         n_locs1, n_locs2 = [], []

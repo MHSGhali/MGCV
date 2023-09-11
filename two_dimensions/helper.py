@@ -47,7 +47,7 @@ class Helpers():
         resized = cv2.resize(img, dim, interpolation = cv2.INTER_AREA)
         return resized
 
-    def plot_gaussian_pyramid(self, pyramid):
+    def plot_gaussian_pyramid(self, pyramid, image_no, path):
         num_levels = len(pyramid)
         rows = int(np.ceil(np.sqrt(num_levels)))
         cols = int(np.ceil(num_levels / rows))
@@ -61,7 +61,7 @@ class Helpers():
             plt.axis('off')
 
         plt.tight_layout()
-        plt.show()
+        plt.savefig(os.path.join(path,f'Image_{image_no}.jpg'))
 
     def show_images(self, images, result):
         fig, axes = plt.subplot_mosaic("ABC;DDD")
