@@ -77,9 +77,10 @@ class Filters():
         stitching = cv2.Stitcher.create()
         images = []
         for image in self.images:
-            images.append(sk.img_as_ubyte(image)[:, :, ::-1])
+            images.append((image.astype(np.uint8))[:, :, ::-1])
+        
         _, pano_im = stitching.stitch(images)
-        result = self.homography.remove_void_regions(pano_im)
+        # result = self.homography.remove_void_regions(pano_im)
         end_time = time.time()
         print(f'Panorama Stitching time = {int(round(1000 * (end_time - start_time)))} mili-seconds')
-        return result
+        return pano_im

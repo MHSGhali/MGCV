@@ -48,7 +48,7 @@ class Homography():
         bf = cv2.BFMatcher()
         matches = bf.knnMatch(descriptors1, descriptors2, k=2)
         good_matches = []
-        ratio = 0.75  # Adjust this threshold as needed
+        ratio = 0.75  
         for m, n in matches:
             if m.distance < ratio * n.distance:
                 good_matches.append(m)
