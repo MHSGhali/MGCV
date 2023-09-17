@@ -72,13 +72,19 @@ class Filters():
         print(f'Image Stacking time = {int(round(1000 * (end_time - start_time)))} mili-seconds')
         return stacked_image, masks
     
-    def opencv_stitch(self):
+    def opencv_stitch(self, image_path, file_type):
+        images = []
+        for filename in sorted(os.listdir(image_path)):
+            if filename.endswith(file_type):
+                img_path = os.path.join(image_path, filename)
+                img = cv2.imread(img_path)
+                if img is not None:
+                    images.append(img.astype(np.uint8))
+        
         start_time = time.time()
         stitching = cv2.Stitcher.create()
-        images = []
-        for image in self.images:
-            images.append((image.astype(np.uint8))[:, :, ::-1])
-        
+        stitching.setPanoConfidenceThresh(0.7)
+        stitching.setWaveCorrection(False)
         _, pano_im = stitching.stitch(images)
         # result = self.homography.remove_void_regions(pano_im)
         end_time = time.time()
