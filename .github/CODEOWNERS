@@ -1,0 +1,7 @@
+# Every file in this repository is owned by the repo owner.
+# Combined with "Require review from Code Owners" on the protected `main`
+# branch, this means only @MHSGhali can supply the approval that unblocks
+# a pull request.
+# Docs: https://docs.github.com/articles/about-code-owners
+
+* @MHSGhali
