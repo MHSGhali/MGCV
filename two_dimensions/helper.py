@@ -1,8 +1,6 @@
 import os
 
-from PIL import Image
 import numpy as np
-import matplotlib.pyplot as plt
 import skimage as sk
 import cv2
 from PIL import ExifTags, Image
@@ -38,6 +36,17 @@ class Helpers():
                 img = self.read_image_with_rotation(img_path)
                 if img is not None:
                     images.append(img)
+        if not images:
+            raise ValueError(f'No {self.file_type} images found in {self.image_path}')
+
+        # EXIF rotation with resize=True changes a frame's dimensions, so a folder of
+        # mixed orientations yields ragged shapes. np.array would then build an object
+        # array (or raise), and the failure would only surface much later.
+        shapes = {img.shape for img in images}
+        if len(shapes) > 1:
+            raise ValueError(
+                f'Images must all have the same shape, got {sorted(shapes)}. '
+                'Mixed EXIF orientations resize frames differently.')
         return np.array(images)
     
     def scale_image(self, img, scale_percent):
@@ -48,6 +57,8 @@ class Helpers():
         return resized
 
     def plot_gaussian_pyramid(self, pyramid, image_no, path):
+        import matplotlib.pyplot as plt
+
         num_levels = len(pyramid)
         rows = int(np.ceil(np.sqrt(num_levels)))
         cols = int(np.ceil(num_levels / rows))
@@ -64,6 +75,8 @@ class Helpers():
         plt.savefig(os.path.join(path,f'Image_{image_no}.jpg'))
 
     def show_images(self, images, result):
+        import matplotlib.pyplot as plt
+
         fig, axes = plt.subplot_mosaic("ABC;DDD")
         fig.tight_layout()
         axes["A"].imshow(images[0])
