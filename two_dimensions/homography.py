@@ -1,15 +1,5 @@
-import os
-import time
-
-from .processing import ImageProcessing
-from .helper import Helpers
 import numpy as np
-import math
-import skimage as sk
-from scipy.spatial.distance import cdist
 import cv2
-import matplotlib.pyplot as plt
-from itertools import combinations
 import imutils
 
 class Homography():
@@ -52,6 +42,12 @@ class Homography():
         for m, n in matches:
             if m.distance < ratio * n.distance:
                 good_matches.append(m)
+
+        # findHomography needs at least 4 correspondences and returns None when RANSAC
+        # cannot fit one. Returning None here would surface as a crash inside
+        # warpPerspective, so report the shortfall instead.
+        if len(good_matches) < 4:
+            return None
 
         src_pts = np.float32([keypoints1[m.queryIdx].pt for m in good_matches]).reshape(-1, 1, 2)
         dst_pts = np.float32([keypoints2[m.trainIdx].pt for m in good_matches]).reshape(-1, 1, 2)

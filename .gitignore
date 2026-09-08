@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+
+# Benchmark inputs and recorded reference outputs (regenerate with run_bench.py)
+bench/images/
+bench/goldens*/
+venv/
+.venv/
+
+# macOS finder metadata
+.DS_Store
